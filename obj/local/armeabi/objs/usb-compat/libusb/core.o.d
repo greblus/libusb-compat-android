@@ -25,18 +25,11 @@ obj/local/armeabi/objs/usb-compat/libusb/core.o: jni/libusb/core.c \
  /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/string.h \
  /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/malloc.h \
  jni/includes/libusb.h \
- /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/endian.h \
- /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/sys/endian.h \
- /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/machine/endian.h \
  /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/sys/time.h \
  /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/linux/time.h \
  /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/time.h \
  /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/asm/siginfo.h \
  /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/asm-generic/siginfo.h \
- jni/libusb/usb.h \
- /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/unistd.h \
- /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/sys/select.h \
- /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/signal.h \
  /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/limits.h \
  /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/sys/limits.h \
  /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/linux/limits.h \
@@ -44,6 +37,10 @@ obj/local/armeabi/objs/usb-compat/libusb/core.o: jni/libusb/core.c \
  /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/machine/limits.h \
  /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/sys/syslimits.h \
  /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/asm/page.h \
+ jni/libusb/usb.h \
+ /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/unistd.h \
+ /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/sys/select.h \
+ /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/signal.h \
  /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/asm/signal.h \
  /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/asm-generic/signal.h \
  /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/sys/ucontext.h \
@@ -111,12 +108,6 @@ jni/android/config.h:
 
 jni/includes/libusb.h:
 
-/home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/endian.h:
-
-/home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/sys/endian.h:
-
-/home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/machine/endian.h:
-
 /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/sys/time.h:
 
 /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/linux/time.h:
@@ -126,14 +117,6 @@ jni/includes/libusb.h:
 /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/asm/siginfo.h:
 
 /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/asm-generic/siginfo.h:
-
-jni/libusb/usb.h:
-
-/home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/unistd.h:
-
-/home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/sys/select.h:
-
-/home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/signal.h:
 
 /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/limits.h:
 
@@ -148,6 +131,14 @@ jni/libusb/usb.h:
 /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/sys/syslimits.h:
 
 /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/asm/page.h:
+
+jni/libusb/usb.h:
+
+/home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/unistd.h:
+
+/home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/sys/select.h:
+
+/home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/signal.h:
 
 /home/greblus/Android/android-ndk-r10e/platforms/android-3/arch-arm/usr/include/asm/signal.h:
 

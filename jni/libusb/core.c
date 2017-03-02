@@ -57,6 +57,42 @@ enum usbi_log_level {
 
 API_EXPORTED struct usb_bus *usb_busses = NULL;
 
+#define compat_err(e) -(errno=libusb_to_errno(e))
+
+static int libusb_to_errno(int result)
+{
+	switch (result) {
+	case LIBUSB_SUCCESS:
+		return 0;
+	case LIBUSB_ERROR_IO:
+		return EIO;
+	case LIBUSB_ERROR_INVALID_PARAM:
+		return EINVAL;
+	case LIBUSB_ERROR_ACCESS:
+		return EACCES;
+	case LIBUSB_ERROR_NO_DEVICE:
+		return ENXIO;
+	case LIBUSB_ERROR_NOT_FOUND:
+		return ENOENT;
+	case LIBUSB_ERROR_BUSY:
+		return EBUSY;
+	case LIBUSB_ERROR_TIMEOUT:
+		return ETIMEDOUT;
+	case LIBUSB_ERROR_OVERFLOW:
+		return EOVERFLOW;
+	case LIBUSB_ERROR_PIPE:
+		return EPIPE;
+	case LIBUSB_ERROR_INTERRUPTED:
+		return EINTR;
+	case LIBUSB_ERROR_NO_MEM:
+		return ENOMEM;
+	case LIBUSB_ERROR_NOT_SUPPORTED:
+		return ENOSYS;
+	default:
+		return ERANGE;
+	}
+}
+
 static void usbi_log(enum usbi_log_level level, const char *function,
 	const char *format, ...)
 {
@@ -129,7 +165,7 @@ API_EXPORTED void usb_set_debug(int level)
 
 API_EXPORTED char *usb_strerror(void)
 {
-	return "Unknown error";
+	return strerror(errno);
 }
 
 static int find_busses(struct usb_bus **ret)
@@ -144,7 +180,7 @@ static int find_busses(struct usb_bus **ret)
 	r = libusb_get_device_list(ctx, &dev_list);
 	if (r < 0) {
 		usbi_err("get_device_list failed with error %d", r);
-		return -1;
+		return compat_err(r);
 	}
 
 	if (r == 0) {
@@ -208,8 +244,12 @@ API_EXPORTED int usb_find_busses(void)
 	int changes = 0;
 	int r;
 
-	usbi_dbg("");
+	/* libusb-1.0 initialization might have failed, but we can't indicate
+	 * this with libusb-0.1, so trap that situation here */
+	if (!ctx)
+		return 0;
 	
+	usbi_dbg("");
 	r = find_busses(&new_busses);
 	if (r < 0) {
 		usbi_err("find_busses failed with error %d", r);
@@ -227,6 +267,7 @@ API_EXPORTED int usb_find_busses(void)
 		int found = 0;
 		usbi_dbg("in loop");
 
+#if 0 /* (yavor)  NO caching */
 		while (nbus) {
 			struct usb_bus *tnbus = nbus->next;
 
@@ -238,7 +279,7 @@ API_EXPORTED int usb_find_busses(void)
 			}
 			nbus = tnbus;
 		}
-
+#endif
 		if (!found) {
 			/* bus removed */
 			usbi_dbg("bus %d removed", bus->location);
@@ -475,7 +516,7 @@ static int initialize_device(struct usb_device *dev)
 		(struct libusb_device_descriptor *) &dev->descriptor);
 	if (r < 0) {
 		usbi_err("error %d getting device descriptor", r);
-		return r;
+		return compat_err(r);
 	}
 
 	num_configurations = dev->descriptor.bNumConfigurations;
@@ -495,7 +536,7 @@ static int initialize_device(struct usb_device *dev)
 		if (r < 0) {
 			clear_device(dev);
 			free(dev->config);
-			return -EIO;
+			return compat_err(r);
 		}
 		r = copy_config_descriptor(dev->config + i, newlib_config);
 		libusb_free_config_descriptor(newlib_config);
@@ -530,10 +571,15 @@ API_EXPORTED int usb_find_devices(void)
 	int r;
 	int changes = 0;
 
+	/* libusb-1.0 initialization might have failed, but we can't indicate
+	 * this with libusb-0.1, so trap that situation here */
+	if (!ctx)
+		return 0;
+
 	usbi_dbg("");
 	dev_list_len = libusb_get_device_list(ctx, &dev_list);
 	if (dev_list_len < 0)
-		return dev_list_len;
+		return compat_err(dev_list_len);
 
 	for (bus = usb_busses; bus; bus = bus->next) {
 		struct usb_device *new_devices = NULL;
@@ -616,6 +662,7 @@ API_EXPORTED usb_dev_handle *usb_open(struct usb_device *dev)
 	if (r < 0) {
 		usbi_err("could not open device, error %d", r);
 		free(udev);
+		errno = libusb_to_errno(r);
 		return NULL;
 	}
 
@@ -640,7 +687,7 @@ API_EXPORTED struct usb_device *usb_device(usb_dev_handle *dev)
 API_EXPORTED int usb_set_configuration(usb_dev_handle *dev, int configuration)
 {
 	usbi_dbg("configuration %d", configuration);
-	return libusb_set_configuration(dev->handle, configuration);
+	return compat_err(libusb_set_configuration(dev->handle, configuration));
 }
 
 API_EXPORTED int usb_claim_interface(usb_dev_handle *dev, int interface)
@@ -654,16 +701,7 @@ API_EXPORTED int usb_claim_interface(usb_dev_handle *dev, int interface)
 		return 0;
 	}
 
-	switch (r) {
-	case LIBUSB_ERROR_NO_MEM:
-		errno = ENOMEM;
-		return -ENOMEM;
-	case LIBUSB_ERROR_BUSY:
-		errno = EBUSY;
-		return -EBUSY;
-	default:
-		return r;
-	}
+	return compat_err(r);
 }
 
 API_EXPORTED int usb_release_interface(usb_dev_handle *dev, int interface)
@@ -675,34 +713,34 @@ API_EXPORTED int usb_release_interface(usb_dev_handle *dev, int interface)
 	if (r == 0)
 		dev->last_claimed_interface = -1;
 
-	return r;
+	return compat_err(r);
 }
 
 API_EXPORTED int usb_set_altinterface(usb_dev_handle *dev, int alternate)
 {
 	usbi_dbg("alternate %d", alternate);
 	if (dev->last_claimed_interface < 0)
-		return -EINVAL;
+		return -(errno=EINVAL);
 	
-	return libusb_set_interface_alt_setting(dev->handle,
-		dev->last_claimed_interface, alternate);
+	return compat_err(libusb_set_interface_alt_setting(dev->handle,
+		dev->last_claimed_interface, alternate));
 }
 
 API_EXPORTED int usb_resetep(usb_dev_handle *dev, unsigned int ep)
 {
-	return usb_clear_halt(dev, ep);
+	return compat_err(usb_clear_halt(dev, ep));
 }
 
 API_EXPORTED int usb_clear_halt(usb_dev_handle *dev, unsigned int ep)
 {
 	usbi_dbg("endpoint %x", ep);
-	return libusb_clear_halt(dev->handle, ep & 0xff);
+	return compat_err(libusb_clear_halt(dev->handle, ep & 0xff));
 }
 
 API_EXPORTED int usb_reset(usb_dev_handle *dev)
 {
 	usbi_dbg("");
-	return libusb_reset_device(dev->handle);
+	return compat_err(libusb_reset_device(dev->handle));
 }
 
 static int usb_bulk_io(usb_dev_handle *dev, int ep, char *bytes,
@@ -719,15 +757,7 @@ static int usb_bulk_io(usb_dev_handle *dev, int ep, char *bytes,
 	if (r == 0 || (r == LIBUSB_ERROR_TIMEOUT && actual_length > 0))
 		return actual_length;
 
-	switch (r) {
-	case LIBUSB_ERROR_TIMEOUT:
-		return -ETIMEDOUT;
-	case LIBUSB_ERROR_PIPE:
-		errno = EPIPE;
-		return -EPIPE;
-	default:
-		return r;
-	}
+	return compat_err(r);
 }
 
 API_EXPORTED int usb_bulk_read(usb_dev_handle *dev, int ep, char *bytes,
@@ -747,6 +777,14 @@ API_EXPORTED int usb_bulk_read(usb_dev_handle *dev, int ep, char *bytes,
 API_EXPORTED int usb_bulk_write(usb_dev_handle *dev, int ep, char *bytes,
 	int size, int timeout)
 {
+	if (ep & USB_ENDPOINT_IN) {
+		/* libusb-0.1 on BSD strangely fix up a write request to endpoint
+		 * 0x81 to be to endpoint 0x01. do the same thing here, but
+		 * warn about this silly behaviour. */
+		usbi_warn("endpoint %x has excessive IN direction bit, fixing");
+		ep &= ~USB_ENDPOINT_IN;
+	}
+
 	return usb_bulk_io(dev, ep, bytes, size, timeout);
 }
 
@@ -763,21 +801,34 @@ static int usb_interrupt_io(usb_dev_handle *dev, int ep, char *bytes,
 	 * read. FIXME: is this how libusb-0.1 works? */
 	if (r == 0 || (r == LIBUSB_ERROR_TIMEOUT && actual_length > 0))
 		return actual_length;
-	else if (r == LIBUSB_ERROR_TIMEOUT)
-		return -ETIMEDOUT;
 
-	return r;
+	return compat_err(r);
 }
 
 API_EXPORTED int usb_interrupt_read(usb_dev_handle *dev, int ep, char *bytes,
 	int size, int timeout)
 {
+	if (!(ep & USB_ENDPOINT_IN)) {
+		/* libusb-0.1 will strangely fix up a read request from endpoint
+		 * 0x01 to be from endpoint 0x81. do the same thing here, but
+		 * warn about this silly behaviour. */
+		usbi_warn("endpoint %x is missing IN direction bit, fixing");
+		ep |= USB_ENDPOINT_IN;
+	}
 	return usb_interrupt_io(dev, ep, bytes, size, timeout);
 }
 
 API_EXPORTED int usb_interrupt_write(usb_dev_handle *dev, int ep, char *bytes,
 	int size, int timeout)
 {
+	if (ep & USB_ENDPOINT_IN) {
+		/* libusb-0.1 on BSD strangely fix up a write request to endpoint
+		 * 0x81 to be to endpoint 0x01. do the same thing here, but
+		 * warn about this silly behaviour. */
+		usbi_warn("endpoint %x has excessive IN direction bit, fixing");
+		ep &= ~USB_ENDPOINT_IN;
+	}
+
 	return usb_interrupt_io(dev, ep, bytes, size, timeout);
 }
 
@@ -795,36 +846,39 @@ API_EXPORTED int usb_control_msg(usb_dev_handle *dev, int bmRequestType,
 	if (r >= 0)
 		return r;
 
-	switch (r) {
-	case LIBUSB_ERROR_TIMEOUT:
-		errno = ETIMEDOUT;
-		return -ETIMEDOUT;
-	case LIBUSB_ERROR_PIPE:
-		errno = EPIPE;
-		return -EPIPE;
-	default:
-		return r;
-	}
+	return compat_err(r);
 }
 
 API_EXPORTED int usb_get_string(usb_dev_handle *dev, int desc_index, int langid,
 	char *buf, size_t buflen)
 {
-	return libusb_get_string_descriptor(dev->handle, desc_index & 0xff,
+	int r;
+	r = libusb_get_string_descriptor(dev->handle, desc_index & 0xff,
 		langid & 0xffff, buf, (int) buflen);
+	if (r >= 0)
+		return r;
+	return compat_err(r);
 }
 
 API_EXPORTED int usb_get_string_simple(usb_dev_handle *dev, int desc_index,
 	char *buf, size_t buflen)
 {
-	return libusb_get_string_descriptor_ascii(dev->handle, desc_index & 0xff,
+	int r;
+	r = libusb_get_string_descriptor_ascii(dev->handle, desc_index & 0xff,
 		buf, (int) buflen);
+	if (r >= 0)
+		return r;
+	return compat_err(r);
 }
 
 API_EXPORTED int usb_get_descriptor(usb_dev_handle *dev, unsigned char type,
 	unsigned char desc_index, void *buf, int size)
 {
-	return libusb_get_descriptor(dev->handle, type, desc_index, buf, size);
+	int r;
+	r = libusb_get_descriptor(dev->handle, type, desc_index, buf, size);
+	if (r >= 0)
+		return r;
+	return compat_err(r);
 }
 
 API_EXPORTED int usb_get_descriptor_by_endpoint(usb_dev_handle *dev, int ep,
@@ -833,9 +887,13 @@ API_EXPORTED int usb_get_descriptor_by_endpoint(usb_dev_handle *dev, int ep,
 	/* this function doesn't make much sense - the specs don't talk about
 	 * getting a descriptor "by endpoint". libusb-1.0 does not provide this
 	 * functionality so we just send a control message directly */
-	return libusb_control_transfer(dev->handle,
+	int r;
+	r = libusb_control_transfer(dev->handle,
 		LIBUSB_ENDPOINT_IN | (ep & 0xff), LIBUSB_REQUEST_GET_DESCRIPTOR,
 		(type << 8) | desc_index, 0, buf, size, 1000);
+	if (r >= 0)
+		return r;
+	return compat_err(r);
 }
 
 API_EXPORTED int usb_get_driver_np(usb_dev_handle *dev, int interface,
@@ -847,14 +905,14 @@ API_EXPORTED int usb_get_driver_np(usb_dev_handle *dev, int interface,
 		snprintf(name, namelen, "dummy");
 		return 0;
 	} else if (r == 0) {
-		return -ENODATA;
+		return -(errno=ENODATA);
 	} else {
-		return r;
+		return compat_err(r);
 	}
 }
 
 API_EXPORTED int usb_detach_kernel_driver_np(usb_dev_handle *dev, int interface)
 {
-	return libusb_detach_kernel_driver(dev->handle, interface);	
+	return compat_err(libusb_detach_kernel_driver(dev->handle, interface));
 }
 
